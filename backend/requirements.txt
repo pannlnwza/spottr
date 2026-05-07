@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+python-multipart
+open_clip_torch>=2.31.0
+timm>=1.0.15
+opencv-python
+pillow
+numpy
+tqdm
+torch
+torchvision
+transformers
+tokenizers
+git+https://github.com/facebookresearch/sam2.git
