@@ -1,9 +1,11 @@
-# Python
+# Byte-compiled / optimized
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
+
+# Distribution / packaging
 build/
 develop-eggs/
 dist/
@@ -22,7 +24,7 @@ share/python-wheels/
 *.egg
 MANIFEST
 
-# Environment
+# Virtual environments
 .env
 .venv
 env/
@@ -31,25 +33,52 @@ ENV/
 env.bak/
 venv.bak/
 
-# Data & Models Cache
+# Testing & coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+nosetests.xml
+.tox/
+.nox/
+
+# Type checkers / linters
+.mypy_cache/
+.ruff_cache/
+.pyre/
+.pytype/
+.dmypy.json
+dmypy.json
+
+# Local databases & logs
+*.db
+*.sqlite
+*.sqlite3
+*.log
+
+# Data & media (in-memory prototype: don't commit uploaded videos / extracted frames)
 data/
+uploads/
 *.mp4
 *.mov
 *.avi
+*.mkv
+*.webm
 *.jpg
 *.jpeg
 *.png
 
-# Jupyter Notebook
+# Jupyter
 .ipynb_checkpoints
 
-# VS Code / IDE
+# IDE / editor
 .vscode/
 .idea/
 *.swp
 *.swo
 
-# OS generated files
+# OS
 .DS_Store
 .DS_Store?
 ._*
