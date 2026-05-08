@@ -10,7 +10,7 @@ import { cx } from '../utils/cx'
 type Props =
   | { phase: 'idle'; onFileSelected: (file: File) => void }
   | { phase: 'uploading'; file: File; progress: number }
-  | { phase: 'indexing'; file: File }
+  | { phase: 'indexing'; file: File; progress?: number }
 
 const PANEL_WIDTH = 'w-[400px]'
 
@@ -30,11 +30,14 @@ export function UploadPanel(props: Props) {
       />
     )
   }
+  
+  const indexPercentText = props.progress !== undefined ? ` ${props.progress}%` : ''
+  
   return (
     <ProgressView
       file={props.file}
       progress={100}
-      caption="Building search index..."
+      caption={`Building search index...${indexPercentText}`}
       showSpinner
     />
   )

@@ -33,7 +33,7 @@ export function SearchPage() {
           <UploadPanel phase="uploading" file={file} progress={state.uploadProgress} />
         )}
         {phase === 'indexing' && file && (
-          <UploadPanel phase="indexing" file={file} />
+          <UploadPanel phase="indexing" file={file} progress={state.indexProgress} />
         )}
         {showResults && (
           <SearchResults

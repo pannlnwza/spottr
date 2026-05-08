@@ -17,3 +17,8 @@ export async function uploadVideo(
   })
   return data
 }
+
+export async function getIndexingProgress(): Promise<{ status: string, progress: number, total: number, percent: number }> {
+  const { data } = await client.get('/upload/progress')
+  return data
+}

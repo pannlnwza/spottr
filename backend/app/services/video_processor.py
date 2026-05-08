@@ -46,15 +46,19 @@ def crops_and_boxes_from_masks(pil_image, masks, pad_ratio=CROP_PAD_RATIO, min_s
     boxes.append((0, 0, W, H))
     return crops, boxes
 
-def process_and_index_video(video_path: Path):
+def process_and_index_video(video_path: Path, progress_callback=None):
     frames, timestamps, fps = load_video(video_path, FRAME_STRIDE_SECONDS, MAX_FRAMES)
     
     all_embeddings = []
     region_to_frame = []
     region_boxes = []
 
-    print(f"Total frames to process: {len(frames)}")
+    total_frames = len(frames)
+    print(f"Total frames to process: {total_frames}")
     for f_idx, frame in enumerate(tqdm(frames, desc="Indexing frames")):
+        if progress_callback:
+            progress_callback(f_idx, total_frames)
+            
         masks = ml_engine.mask_generator.generate(np.array(frame))
         crops, boxes = crops_and_boxes_from_masks(frame, masks)
         embs = ml_engine.encode_images_siglip(crops)
@@ -74,3 +78,6 @@ def process_and_index_video(video_path: Path):
     ml_engine.global_index.frames_cache = frames
     ml_engine.global_index.timestamps = timestamps
     ml_engine.global_index.fps = fps
+    
+    if progress_callback:
+        progress_callback(total_frames, total_frames)
