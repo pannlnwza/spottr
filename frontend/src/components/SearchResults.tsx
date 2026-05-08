@@ -9,9 +9,7 @@ type Props = {
   loading?: boolean
 }
 
-const thumbClasses = ['thumb-p1', 'thumb-p2', 'thumb-p3', 'thumb-p4', 'thumb-p5', 'thumb-p6']
 const widths = [220, 180, 150, 200, 170, 190, 160, 240, 230, 155, 185, 165]
-
 const ROW_SIZE = 6
 
 export function SearchResults({ results, query, loading }: Props) {
@@ -60,18 +58,24 @@ function ResultCard({
   position: number
   isLast: boolean
 }) {
-  const thumbClass = thumbClasses[position % thumbClasses.length]
   const width = widths[position % widths.length]
 
   return (
     <div
       style={isLast ? undefined : { width }}
       className={cx(
-        'group relative h-[200px] flex-shrink-0 cursor-pointer overflow-hidden rounded-md',
-        thumbClass,
+        'group relative h-[200px] flex-shrink-0 cursor-pointer overflow-hidden rounded-md bg-gray-100',
         isLast && 'flex-1',
       )}
     >
+      <img
+        src={`/api/frame/${result.frame_idx}`}
+        alt=""
+        className="h-full w-full object-cover"
+        onError={(e) => {
+          e.currentTarget.style.display = 'none'
+        }}
+      />
       <button
         type="button"
         aria-label="Bookmark"

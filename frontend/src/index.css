@@ -35,21 +35,3 @@
   }
 }
 
-@utility thumb-p1 {
-  background: linear-gradient(135deg, #c7886d 0%, #a85d4a 100%);
-}
-@utility thumb-p2 {
-  background: linear-gradient(135deg, #d4786a 0%, #b44d3f 100%);
-}
-@utility thumb-p3 {
-  background: linear-gradient(135deg, #c46858 0%, #a33d2f 100%);
-}
-@utility thumb-p4 {
-  background: linear-gradient(135deg, #d98a7a 0%, #b8594a 100%);
-}
-@utility thumb-p5 {
-  background: linear-gradient(135deg, #bf6050 0%, #9e3525 100%);
-}
-@utility thumb-p6 {
-  background: linear-gradient(135deg, #e09585 0%, #c06050 100%);
-}
