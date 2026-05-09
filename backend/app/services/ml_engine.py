@@ -16,21 +16,23 @@ elif torch.backends.mps.is_available():
 else:
     DEVICE = "cpu"
 
-CACHE_DIR = Path("data/cache")
-MODEL_CACHE = CACHE_DIR / "models"
-HF_CACHE = CACHE_DIR / "hf"
-MODEL_CACHE.mkdir(parents=True, exist_ok=True)
+BACKEND_DIR = Path(__file__).resolve().parent.parent.parent
+MODELS_DIR = BACKEND_DIR / "models"
+SAM2_DIR = MODELS_DIR / "sam2"
+HF_CACHE = MODELS_DIR / "hf"
+SAM2_DIR.mkdir(parents=True, exist_ok=True)
 HF_CACHE.mkdir(parents=True, exist_ok=True)
 
 os.environ["HF_HOME"] = str(HF_CACHE)
 os.environ["HUGGINGFACE_HUB_CACHE"] = str(HF_CACHE / "hub")
 
-# SAM2 Config
-SAM2_CHECKPOINT_URL = "https://dl.fbaipublicfiles.com/segment_anything_2/092824/sam2.1_hiera_tiny.pt"
-SAM2_CHECKPOINT = MODEL_CACHE / "sam2.1_hiera_tiny.pt"
-# Depending on where the app runs, the config path in sam2 package is needed.
-# Usually sam2 will resolve "configs/sam2.1/sam2.1_hiera_t.yaml" internally, or we need to pass the package name
-SAM2_CONFIG = "configs/sam2.1/sam2.1_hiera_t.yaml"
+# SAM2 Config — must match 02_pipeline_setup.ipynb (the scoring head was trained on base_plus features).
+SAM2_VARIANT = "sam2.1_hiera_base_plus.pt"
+SAM2_CHECKPOINT_URL = f"https://dl.fbaipublicfiles.com/segment_anything_2/092824/{SAM2_VARIANT}"
+SAM2_CHECKPOINT = SAM2_DIR / SAM2_VARIANT
+SAM2_CONFIG = "configs/sam2.1/sam2.1_hiera_b+.yaml"
+
+SCORING_HEAD_PATH = MODELS_DIR / "trained_scoring_head.pkl"
 
 sam2_model = None
 mask_generator = None
@@ -65,10 +67,8 @@ def init_models():
     sam2_model = build_sam2(SAM2_CONFIG, str(SAM2_CHECKPOINT), device=DEVICE)
     mask_generator = SAM2AutomaticMaskGenerator(
         model=sam2_model,
-        points_per_side=8,
-        pred_iou_thresh=0.86,
-        stability_score_thresh=0.92,
-        min_mask_region_area=500,
+        points_per_side=16,
+        pred_iou_thresh=0.7,
     )
 
     siglip_model, siglip_preprocess = open_clip.create_model_from_pretrained(
@@ -81,15 +81,14 @@ def init_models():
         probe = siglip_tokenizer(["probe"]).to(DEVICE)
         SIGLIP_DIM = siglip_model.encode_text(probe).shape[-1]
     
-    scoring_head_path = Path("trained_scoring_head.pkl")
-    if scoring_head_path.exists():
-        with open(scoring_head_path, "rb") as f:
+    if SCORING_HEAD_PATH.exists():
+        with open(SCORING_HEAD_PATH, "rb") as f:
             trained = pickle.load(f)
             mlp_model = trained["model"]
             mlp_scaler = trained["scaler"]
-        print(f"Scoring head loaded successfully from {scoring_head_path}")
+        print(f"Scoring head loaded successfully from {SCORING_HEAD_PATH}")
     else:
-        print(f"Warning: Scoring head {scoring_head_path} not found.")
+        print(f"Warning: Scoring head {SCORING_HEAD_PATH} not found.")
 
     print("Models initialized successfully!")
 

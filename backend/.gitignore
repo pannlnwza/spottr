@@ -60,6 +60,11 @@ dmypy.json
 # Data & media (in-memory prototype: don't commit uploaded videos / extracted frames)
 data/
 uploads/
+
+# Downloaded model weights (fetched by scripts/download_models.py)
+# trained_scoring_head.pkl is intentionally tracked, the heavy weights are not
+models/sam2/
+models/hf/
 *.mp4
 *.mov
 *.avi
