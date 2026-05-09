@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from app.api.routes import upload, search
 from app.services.ml_engine import init_models
+from app.services.ml_engine import mlp_model, mlp_scaler
 
 
 @asynccontextmanager
@@ -22,4 +23,9 @@ def read_root():
 
 @app.get("/health")
 def health_check():
-    return {"status": "ok"}
+    return {
+        "status": "ok",
+        "scoring_head_loaded": mlp_model is not None,
+        "scaler_loaded": mlp_scaler is not None
+    }
+
