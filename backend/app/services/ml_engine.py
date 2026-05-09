@@ -1,5 +1,6 @@
 import os
 import urllib.request
+import pickle
 from pathlib import Path
 import numpy as np
 import torch
@@ -38,12 +39,17 @@ siglip_preprocess = None
 siglip_tokenizer = None
 SIGLIP_DIM = 768 # default for ViT-B-16-SigLIP2-256
 
+mlp_model = None
+mlp_scaler = None
+
 # Global State for indexing
 class MemoryIndex:
     def __init__(self):
         self.index = None
         self.region_to_frame = None
         self.region_boxes = None
+        self.region_areas = None
+        self.region_ious = None
         self.frames_cache = [] # Not saving full images in memory for production, but keeping it simple for prototype
         self.timestamps = []
         self.fps = None
@@ -51,7 +57,7 @@ class MemoryIndex:
 global_index = MemoryIndex()
 
 def init_models():
-    global sam2_model, mask_generator, siglip_model, siglip_preprocess, siglip_tokenizer, SIGLIP_DIM
+    global sam2_model, mask_generator, siglip_model, siglip_preprocess, siglip_tokenizer, SIGLIP_DIM, mlp_model, mlp_scaler
     if not SAM2_CHECKPOINT.exists():
         print(f"Downloading {SAM2_CHECKPOINT_URL} to {SAM2_CHECKPOINT}")
         urllib.request.urlretrieve(SAM2_CHECKPOINT_URL, str(SAM2_CHECKPOINT))
@@ -59,7 +65,7 @@ def init_models():
     sam2_model = build_sam2(SAM2_CONFIG, str(SAM2_CHECKPOINT), device=DEVICE)
     mask_generator = SAM2AutomaticMaskGenerator(
         model=sam2_model,
-        points_per_side=16,
+        points_per_side=8,
         pred_iou_thresh=0.86,
         stability_score_thresh=0.92,
         min_mask_region_area=500,
@@ -75,6 +81,16 @@ def init_models():
         probe = siglip_tokenizer(["probe"]).to(DEVICE)
         SIGLIP_DIM = siglip_model.encode_text(probe).shape[-1]
     
+    scoring_head_path = Path("trained_scoring_head.pkl")
+    if scoring_head_path.exists():
+        with open(scoring_head_path, "rb") as f:
+            trained = pickle.load(f)
+            mlp_model = trained["model"]
+            mlp_scaler = trained["scaler"]
+        print(f"Scoring head loaded successfully from {scoring_head_path}")
+    else:
+        print(f"Warning: Scoring head {scoring_head_path} not found.")
+
     print("Models initialized successfully!")
 
 def encode_images_siglip(pil_images, batch_size=32):

@@ -4,9 +4,9 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query'
-import { useCallback, useState } from 'react'
+import { useCallback, useState, useEffect } from 'react'
 import { searchVideo } from '../api/search'
-import { uploadVideo } from '../api/upload'
+import { uploadVideo, getIndexingProgress } from '../api/upload'
 import type { SearchResult } from '../types'
 
 export type Phase =
@@ -21,6 +21,7 @@ export type SessionState = {
   phase: Phase
   file: File | null
   uploadProgress: number
+  indexProgress?: number
   query: string
   results: SearchResult[]
 }
@@ -32,6 +33,7 @@ export function useVideoSession() {
   const [file, setFile] = useState<File | null>(null)
   const [submittedQuery, setSubmittedQuery] = useState<string>('')
   const [uploadProgress, setUploadProgress] = useState(0)
+  const [indexProgress, setIndexProgress] = useState<number | undefined>(undefined)
 
   const uploadMutation = useMutation({
     mutationFn: (newFile: File) => uploadVideo(newFile, setUploadProgress),
@@ -39,6 +41,29 @@ export function useVideoSession() {
       queryClient.removeQueries({ queryKey: [SEARCH_KEY] })
     },
   })
+
+  // Poll for indexing progress
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval>
+    if (uploadMutation.isPending && uploadProgress >= 100) {
+      interval = setInterval(async () => {
+        try {
+          const res = await getIndexingProgress()
+          if (res.status === 'processing') {
+            setIndexProgress(res.percent)
+          }
+        } catch (e) {
+          // ignore
+        }
+      }, 1000)
+    }
+    return () => {
+      if (interval) clearInterval(interval)
+      if (!uploadMutation.isPending) {
+        setIndexProgress(undefined)
+      }
+    }
+  }, [uploadMutation.isPending, uploadProgress])
 
   const searchQuery = useQuery({
     queryKey: [SEARCH_KEY, submittedQuery],
@@ -81,6 +106,7 @@ export function useVideoSession() {
     uploadMutation.reset()
     setSubmittedQuery('')
     setUploadProgress(0)
+    setIndexProgress(undefined)
     setFile(null)
     queryClient.removeQueries({ queryKey: [SEARCH_KEY] })
   }, [queryClient, uploadMutation])
@@ -89,6 +115,7 @@ export function useVideoSession() {
     phase,
     file,
     uploadProgress,
+    indexProgress,
     query: submittedQuery,
     results: searchQuery.data?.results ?? [],
   }

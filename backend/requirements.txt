@@ -11,4 +11,6 @@ torch
 torchvision
 transformers
 tokenizers
+scikit-learn==1.6.1
+xgboost
 git+https://github.com/facebookresearch/sam2.git
