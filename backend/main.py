@@ -19,3 +19,7 @@ app.include_router(search.router, prefix="/api", tags=["search"])
 @app.get("/")
 def read_root():
     return {"message": "Spottrr API is running."}
+
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}
