@@ -6,7 +6,7 @@ from tqdm import tqdm
 from app.services import ml_engine
 
 CROP_PAD_RATIO = 0.25
-FRAME_STRIDE_SECONDS = 2.0  # เพิ่มจาก 1.0 เป็น 2.0 เพื่อให้ดึงเฟրมน้อยลง 2 เท่า (เร็วขึ้นมาก)
+FRAME_STRIDE_SECONDS = 2.0
 MAX_FRAMES = 30
 
 def load_video(path, stride_seconds=1.0, max_frames=30):
