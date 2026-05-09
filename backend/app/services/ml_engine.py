@@ -59,7 +59,7 @@ def init_models():
     sam2_model = build_sam2(SAM2_CONFIG, str(SAM2_CHECKPOINT), device=DEVICE)
     mask_generator = SAM2AutomaticMaskGenerator(
         model=sam2_model,
-        points_per_side=16,
+        points_per_side=8,
         pred_iou_thresh=0.86,
         stability_score_thresh=0.92,
         min_mask_region_area=500,
