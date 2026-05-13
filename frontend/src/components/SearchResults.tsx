@@ -88,7 +88,10 @@ function ResultCard({
   width: number
   height: number
 }) {
-  const frameSize = useImageSize(result.frameUrl)
+  const frameSize = useImageSize(`/api/frame/${result.frame_idx}`)
+  // TODO: persist reaction/bookmark to backend (POST /feedback) for model retraining
+  const [reaction, setReaction] = useState<'like' | 'dislike' | null>(null)
+  const [bookmarked, setBookmarked] = useState(false)
 
   return (
     <div
@@ -100,7 +103,7 @@ function ResultCard({
           frameSize={frameSize}
           cardWidth={width}
           cardHeight={height}
-          src={result.frameUrl}
+          src={`/api/frame/${result.frame_idx}`}
           box={result.box}
         />
       )}
@@ -108,26 +111,50 @@ function ResultCard({
         <button
           type="button"
           aria-label="Like"
-          onClick={(e) => e.stopPropagation()}
+          aria-pressed={reaction === 'like'}
+          onClick={(e) => {
+            e.stopPropagation()
+            setReaction((r) => (r === 'like' ? null : 'like'))
+          }}
           className="flex h-6 w-6 items-center justify-center border-0 bg-transparent text-white opacity-80 hover:opacity-100"
         >
-          <ThumbsUp className="h-4 w-4" strokeWidth={2} />
+          <ThumbsUp
+            className="h-4 w-4"
+            strokeWidth={2}
+            fill={reaction === 'like' ? 'currentColor' : 'none'}
+          />
         </button>
         <button
           type="button"
           aria-label="Dislike"
-          onClick={(e) => e.stopPropagation()}
+          aria-pressed={reaction === 'dislike'}
+          onClick={(e) => {
+            e.stopPropagation()
+            setReaction((r) => (r === 'dislike' ? null : 'dislike'))
+          }}
           className="flex h-6 w-6 items-center justify-center border-0 bg-transparent text-white opacity-80 hover:opacity-100"
         >
-          <ThumbsDown className="h-4 w-4" strokeWidth={2} />
+          <ThumbsDown
+            className="h-4 w-4"
+            strokeWidth={2}
+            fill={reaction === 'dislike' ? 'currentColor' : 'none'}
+          />
         </button>
         <button
           type="button"
           aria-label="Bookmark"
-          onClick={(e) => e.stopPropagation()}
+          aria-pressed={bookmarked}
+          onClick={(e) => {
+            e.stopPropagation()
+            setBookmarked((b) => !b)
+          }}
           className="flex h-6 w-6 items-center justify-center border-0 bg-transparent text-white opacity-80 hover:opacity-100"
         >
-          <Bookmark className="h-4 w-4" strokeWidth={2} />
+          <Bookmark
+            className="h-4 w-4"
+            strokeWidth={2}
+            fill={bookmarked ? 'currentColor' : 'none'}
+          />
         </button>
       </div>
       <div className="absolute inset-0 flex items-center justify-center bg-black/15 opacity-0 transition-opacity group-hover:opacity-100">
