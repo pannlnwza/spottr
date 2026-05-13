@@ -1,5 +1,6 @@
-import { Heart, MoreVertical, Play } from 'lucide-react'
-import type { SearchResult } from '../types'
+import { Bookmark, MoreVertical, Play, ThumbsDown, ThumbsUp } from 'lucide-react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import type { Box, SearchResult } from '../types'
 import { cx } from '../utils/cx'
 import { formatTimestamp } from '../utils/format'
 
@@ -9,11 +10,36 @@ type Props = {
   loading?: boolean
 }
 
-const widths = [220, 180, 150, 200, 170, 190, 160, 240, 230, 155, 185, 165]
-const ROW_SIZE = 6
+const TARGET_COLUMN_WIDTH = 240
+const GAP = 6
+const BBOX_FILL = 0.78
+const MIN_ASPECT = 0.5
+const MAX_ASPECT = 3.0
+
+type Column = {
+  cards: { result: SearchResult; height: number }[]
+  height: number
+}
 
 export function SearchResults({ results, query, loading }: Props) {
-  const rows = chunk(results, ROW_SIZE)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [containerWidth, setContainerWidth] = useState(0)
+
+  useLayoutEffect(() => {
+    const node = containerRef.current
+    if (!node) return
+    setContainerWidth(node.clientWidth)
+    const ro = new ResizeObserver(([entry]) => {
+      setContainerWidth(entry.contentRect.width)
+    })
+    ro.observe(node)
+    return () => ro.disconnect()
+  }, [])
+
+  const { columns, columnWidth } = useMemo(
+    () => buildColumns(results, containerWidth),
+    [results, containerWidth],
+  )
 
   return (
     <div className={cx('transition-opacity', loading && 'opacity-60')}>
@@ -31,15 +57,19 @@ export function SearchResults({ results, query, loading }: Props) {
           </>
         )}
       </p>
-      <div className="flex flex-col gap-1.5">
-        {rows.map((row, i) => (
-          <div key={i} className="flex gap-1.5">
-            {row.map((result, j) => (
+      <div ref={containerRef} className="flex items-start" style={{ gap: GAP }}>
+        {columns.map((col, i) => (
+          <div
+            key={i}
+            className="flex flex-col"
+            style={{ gap: GAP, width: columnWidth }}
+          >
+            {col.cards.map(({ result, height }) => (
               <ResultCard
                 key={result.frame_idx}
                 result={result}
-                position={i * ROW_SIZE + j}
-                isLast={j === row.length - 1}
+                width={columnWidth}
+                height={height}
               />
             ))}
           </div>
@@ -51,38 +81,55 @@ export function SearchResults({ results, query, loading }: Props) {
 
 function ResultCard({
   result,
-  position,
-  isLast,
+  width,
+  height,
 }: {
   result: SearchResult
-  position: number
-  isLast: boolean
+  width: number
+  height: number
 }) {
-  const width = widths[position % widths.length]
+  const frameSize = useImageSize(result.frameUrl)
 
   return (
     <div
-      style={isLast ? undefined : { width }}
-      className={cx(
-        'group relative h-[200px] flex-shrink-0 cursor-pointer overflow-hidden rounded-md bg-gray-100',
-        isLast && 'flex-1',
-      )}
+      style={{ width, height }}
+      className="group relative flex-shrink-0 cursor-pointer overflow-hidden rounded-md bg-gray-100"
     >
-      <img
-        src={`/api/frame/${result.frame_idx}`}
-        alt=""
-        className="h-full w-full object-cover"
-        onError={(e) => {
-          e.currentTarget.style.display = 'none'
-        }}
-      />
-      <button
-        type="button"
-        aria-label="Bookmark"
-        className="absolute right-2 top-2 z-10 flex h-6 w-6 items-center justify-center border-0 bg-transparent text-white"
-      >
-        <Heart className="h-4 w-4" strokeWidth={2} />
-      </button>
+      {frameSize && (
+        <FocusedImage
+          frameSize={frameSize}
+          cardWidth={width}
+          cardHeight={height}
+          src={result.frameUrl}
+          box={result.box}
+        />
+      )}
+      <div className="absolute right-2 top-2 z-10 flex items-center gap-1.5">
+        <button
+          type="button"
+          aria-label="Like"
+          onClick={(e) => e.stopPropagation()}
+          className="flex h-6 w-6 items-center justify-center border-0 bg-transparent text-white opacity-80 hover:opacity-100"
+        >
+          <ThumbsUp className="h-4 w-4" strokeWidth={2} />
+        </button>
+        <button
+          type="button"
+          aria-label="Dislike"
+          onClick={(e) => e.stopPropagation()}
+          className="flex h-6 w-6 items-center justify-center border-0 bg-transparent text-white opacity-80 hover:opacity-100"
+        >
+          <ThumbsDown className="h-4 w-4" strokeWidth={2} />
+        </button>
+        <button
+          type="button"
+          aria-label="Bookmark"
+          onClick={(e) => e.stopPropagation()}
+          className="flex h-6 w-6 items-center justify-center border-0 bg-transparent text-white opacity-80 hover:opacity-100"
+        >
+          <Bookmark className="h-4 w-4" strokeWidth={2} />
+        </button>
+      </div>
       <div className="absolute inset-0 flex items-center justify-center bg-black/15 opacity-0 transition-opacity group-hover:opacity-100">
         <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/90">
           <Play className="h-3.5 w-3.5 text-ink" fill="currentColor" strokeWidth={0} />
@@ -104,8 +151,100 @@ function ResultCard({
   )
 }
 
-function chunk<T>(arr: T[], size: number): T[][] {
-  const out: T[][] = []
-  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size))
-  return out
+function FocusedImage({
+  frameSize,
+  cardWidth,
+  cardHeight,
+  src,
+  box,
+}: {
+  frameSize: { w: number; h: number }
+  cardWidth: number
+  cardHeight: number
+  src: string
+  box: Box
+}) {
+  const scale = Math.min(
+    (cardHeight * BBOX_FILL) / Math.max(box.h, 1),
+    (cardWidth * BBOX_FILL) / Math.max(box.w, 1),
+  )
+  const imgW = frameSize.w * scale
+  const imgH = frameSize.h * scale
+  const boxCenterX = (box.x + box.w / 2) * scale
+  const boxCenterY = (box.y + box.h / 2) * scale
+
+  return (
+    <img
+      src={src}
+      alt=""
+      style={{
+        position: 'absolute',
+        width: imgW,
+        height: imgH,
+        left: cardWidth / 2 - boxCenterX,
+        top: cardHeight / 2 - boxCenterY,
+        maxWidth: 'none',
+      }}
+    />
+  )
+}
+
+function buildColumns(
+  results: SearchResult[],
+  containerWidth: number,
+): { columns: Column[]; columnWidth: number } {
+  if (containerWidth <= 0 || results.length === 0) {
+    return { columns: [], columnWidth: 0 }
+  }
+
+  const columnCount = Math.max(
+    1,
+    Math.floor((containerWidth + GAP) / (TARGET_COLUMN_WIDTH + GAP)),
+  )
+  const columnWidth = (containerWidth - (columnCount - 1) * GAP) / columnCount
+
+  const columns: Column[] = Array.from({ length: columnCount }, () => ({
+    cards: [],
+    height: 0,
+  }))
+
+  for (const result of results) {
+    const aspect = clamp(
+      result.box.w / Math.max(result.box.h, 1),
+      MIN_ASPECT,
+      MAX_ASPECT,
+    )
+    const cardHeight = columnWidth / aspect
+
+    let shortest = 0
+    for (let i = 1; i < columns.length; i++) {
+      if (columns[i].height < columns[shortest].height) shortest = i
+    }
+    columns[shortest].cards.push({ result, height: cardHeight })
+    columns[shortest].height += cardHeight + GAP
+  }
+
+  return { columns, columnWidth }
+}
+
+function clamp(n: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, n))
+}
+
+function useImageSize(src: string) {
+  const [size, setSize] = useState<{ w: number; h: number } | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    const img = new Image()
+    img.onload = () => {
+      if (!cancelled) {
+        setSize({ w: img.naturalWidth, h: img.naturalHeight })
+      }
+    }
+    img.src = src
+    return () => {
+      cancelled = true
+    }
+  }, [src])
+  return size
 }
