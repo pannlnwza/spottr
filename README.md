@@ -56,3 +56,6 @@ The scoring head is trained in `notebooks/03_trained_scoring_head.ipynb` and shi
 | `03_trained_scoring_head.ipynb` | Trains and compares 4 scoring head variants (logreg, MLP small/medium, XGBoost) |
 | `04_explainability_trained_model.ipynb` | SHAP values, per-feature importance, qualitative test cases |
 
+## Evaluation Data
+
+The notebooks evaluate on [COCO val2017](https://cocodataset.org/), publicly available and downloaded automatically by `02_pipeline_setup.ipynb`. The full dataset is not bundled with this repo.
